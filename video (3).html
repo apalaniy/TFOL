@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <div id="instruction"></div>
+        <div id="player"></div>
+        <div id="rectangle" style="width:680px; height:360px; background-color:white"></div>
+        
+        <script>
+            
+            //position of the player
+            var d = document.getElementById('player');
+            d.style.position = "absolute";
+            d.style.left = 30 + '%';
+            d.style.top = 25 +'%';
+            
+            //position of the pop up window
+            var d = document.getElementById('rectangle');
+            d.style.position = "absolute";
+            d.style.left = 29 + '%';
+            d.style.top = 25 +'%';
+            
+            //position of instructions
+            var d = document.getElementById('instruction');
+            d.style.position = "absolute";
+            d.style.left = 30 + '%';
+            d.style.top = 15 +'%';
+            d.innerHTML = "You can pause the video at any point, but please" + "<font class='emphasis'> do not fast-forward the video. </font>";
+        
+            element = document.getElementById("rectangle");
+            element.style.display = 'none';
+
+        var tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        
+        var player;
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('player', {
+                                   height: '360',
+                                   width: '640',
+                                   videoId: 'c1HlyJilqd8',
+                                   playerVars: {'autoplay': 0, 'wmode': 'transparent', 'fs': 0, 'controls':1, 'rel':0, 'modestbranding':1, 'showinfo':0},
+                                   events: {
+                                   'onReady': onPlayerReady,
+                                   'onStateChange': onPlayerStateChange
+                                   }
+                                   });
+            document.getElementById('player').style['z-index']=-10;
+            document.getElementById('player').style['-webkit-transform']='translateZ(0)';
+        }
+        
+        function onPlayerReady(event) {
+            event.target.playVideo();
+        }
+        
+        
+        var j = 0;
+        var num_quest = 6;
+        // IVAN: change the time where the questions should be asked (in seconds)
+        var times_to_stop = [53, 233.5, 392.5, 548, 739, 829];
+        // IVAN: change the time where the learner should be sent to according to his answer. Elements of outer array correcpond to questions,
+        // elements of inner arrays correspond to options. Time must be in seconds
+        var times_to_go = [[57, 78.5, 110, 99], [242, 270, 291, 314, 336], [403, 439, 460, 481.5], [563, 613, 591], [748, 751], [833, 836.5]];
+        var num_options = [4, 5, 4, 3, 2, 2];
+        var end_explanation = [[76, 98, 118, 109], [269, 290, 313, 335, 338.5], [435, 456, 481, 483.5], [590.5, 615 ,612], [750, 752.5], [836, 838]];
+        var correct_exp = [118, 339, 484, 619, 754.5, 840];
+        var is_image = [true, true, true, true, false, false];
+        var srcs     = ['https://s3.amazonaws.com/05840/fig1.png', 'https://s3.amazonaws.com/05840/fig2.png',
+                        'https://s3.amazonaws.com/05840/fig3.png', 'https://s3.amazonaws.com/05840/fig4.png',
+                        'none', 'none'];
+        var texts = ["What fundamental physics effect/law can help astronauts find each other and how?",
+                     "Given that Alice and Bob are d distance away from the station, at which point(s) are they located?",
+                     "Given that Alice and Bob are d1 distance away from the first station and d2 distance away from the second station, at which point(s) are they located?",
+                     "Given that Alice and Bob are d1 distance away from the first station, \
+                     d2 distance away from the second station and d3 distance away from the third station,\
+                     at which point(s) are they located?",
+                     "How many satellites should the device hear to determine user\'s location in 3D world?",
+                     "Given the information about GPS you learned today, do you think that Bob \
+                     will be able to find his iPhone lost in mountains. Notice that there is no internet connection in mountains."];
+        var options = [[" 1. Newton\'s Second Law", " 2. The first law of thermodynamics", " 3. Constant speed of radio waves in vacuum", " 4. Nothing can help"],
+                       [" 1. A", " 2. B", " 3. C", " 4. E", " 5. There is not enough information to tell"],
+                       [" 1. A or C, but not in any other", " 2. exactly B", " 3. exactly C", " 4. A or B, but not any other"],
+                       [" 1. A or G, but not in any other", " 2. exactly B", " 3. exactly A"],
+                       [" 1. three, as in 2D Asteroid X", " 2. four, you need to add one more"],
+                       [" 1. no way", " 2. yeah, sure"]];
+        
+        var regime = 'quest';
+        var stopPlayTimer;
+        var stopPlayAt = times_to_stop[j];
+        //source https://stackoverflow.com/questions/14152415/use-youtubeapi-to-play-youtube-video-until-a-particular-time-and-pause
+        function onPlayerStateChange(event) {
+            var time, rate, remainingTime;
+            clearTimeout(stopPlayTimer);
+            if (event.data == YT.PlayerState.PLAYING) {
+                time = player.getCurrentTime();
+                if (time + .4 < stopPlayAt) {
+                    rate = player.getPlaybackRate();
+                    remainingTime = (stopPlayAt - time) / rate;
+                    if(regime == 'quest') {
+                        stopPlayTimer = setTimeout(createQuestion, remainingTime * 1000);
+                    }
+                    if(regime == 'explanation') {
+                        stopPlayTimer = setTimeout(stopSchooling, remainingTime * 1000);
+                    }
+                }
+            }
+        }
+                     
+        function stopSchooling() {
+            next_time = correct_exp[j];
+            j = j + 1;
+            if (j < num_quest) {
+                stopPlayAt = times_to_stop[j];
+            }
+            regime = 'quest';
+            player.seekTo(next_time);
+            player.playVideo();
+        }
+    
+        function createQuestion() {
+            player.pauseVideo();
+            var html = "";
+            html += "<table>"
+            if (is_image[j] == true) {
+                html += "<tr> <td> <img style='border: #000000 1px outset;' src='" + srcs[j] + "' width=680/> </td></tr>";
+            }
+            html += "<tr> <td>" + texts[j] + "<br><br>";
+            for (var k = 0; k < num_options[j]; k++) {
+                html += "<label> <input type='radio' name='question" + "" + j.toString() + "' value='option" + k.toString() + "'\
+                id='" + j.toString() + k.toString() + "' />" + options[j][k] +  "</label><br>";
+            }
+            html += "<br><br><span id='submit_ans'><button type='button' onClick='javascript:evaluateAnswer()'> Submit </button></span> </td></tr> </table>";
+            element.innerHTML += html;
+            element.style.display = 'block';
+        }
+        
+        function evaluateAnswer() {
+            var counter = 0;
+            var next_time;
+            var answer;
+            for(var k=0; k<num_options[j]; k++) {
+                if(document.getElementById(j.toString() + k.toString()).checked == true) {
+                    counter += 1;
+                    next_time = times_to_go[j][k];
+                    answer = k;
+                }
+            }
+            if(counter == 0) {
+                alert("You must select an answer!");
+            } else {
+                element.style.display = 'none';
+                element.innerHTML = '';
+                regime = 'explanation';
+                stopPlayAt = end_explanation[j][answer];
+                player.seekTo(next_time);
+                player.playVideo();
+            }
+        }
+                     
+        </script>
+    </body>
+    <style>
+        font.emphasis {
+            font-weight:bold;
+            color:red;
+        }
+    
+    font.bolded {
+        font-weight:bold;
+    }
+    </style>
+</html>
